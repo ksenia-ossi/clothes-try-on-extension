@@ -1,84 +1,95 @@
-# Clothes Picker — Chrome-расширение
+# Clothes Picker — Chrome extension with virtual try-on
 
-Выбирай картинки одежды на сайтах магазинов, сохраняй их в расширение, а дальше — отправляй в [Replicate API](https://replicate.com) для обработки (примерка, удаление фона и т.д.).
+Pick clothing images on any online shop, save them into the extension, then try them on your own photo
+through the [Replicate API](https://replicate.com) (model [prunaai/p-image-try-on](https://replicate.com/prunaai/p-image-try-on)).
 
-## Статус
+Side project built to learn Chrome extension development (Manifest V3) and third-party ML APIs.
+Vanilla JavaScript, no build step, no backend — everything runs in the browser.
 
-| Шаг | Что | Статус |
+**Stack:** JavaScript (ES modules), Chrome Extensions API (Manifest V3: service worker, content script, popup, `chrome.storage`), Replicate REST API.
+
+## Features
+
+| | Feature | Status |
 |---|---|---|
-| 1 | Выбор картинок на любом сайте и сохранение в расширение | ✅ готово |
-| 2 | Загрузка своего фото и виртуальная примерка через Replicate ([prunaai/p-image-try-on](https://replicate.com/prunaai/p-image-try-on)) | ✅ готово |
-| 3 | Результаты примерок в расширении (открыть / скачать / повторить) | ✅ готово |
+| 1 | Pick images on any website and save them into the extension (3 ways: pick mode, hotkey, context menu) | ✅ done |
+| 2 | Upload your own photo and run a virtual try-on through Replicate | ✅ done |
+| 3 | Try-on history inside the extension (open / download / repeat / delete) | ✅ done |
 
-## Установка (режим разработчика)
+The popup UI is in Russian (tabs **«Вещи»** = Items, **«Примерки»** = Try-ons, **«Настройки»** = Settings).
 
-1. Склонируй репозиторий:
+## Install (developer mode)
+
+1. Clone the repository:
    ```bash
    git clone https://github.com/ksenia-ossi/try.git
    ```
-2. Открой в Chrome `chrome://extensions`
-3. Включи **«Режим разработчика»** (переключатель справа сверху)
-4. Нажми **«Загрузить распакованное расширение»** и выбери папку `extension/`
-5. Закрепи иконку расширения на панели (иконка-пазл → булавка)
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (toggle in the top-right corner).
+4. Click **Load unpacked** and select the `extension/` folder.
+5. Pin the extension icon to the toolbar (puzzle icon → pin).
 
-После изменения кода нажми ↻ на карточке расширения в `chrome://extensions` и перезагрузи страницу магазина.
+After changing the code, click ↻ on the extension card in `chrome://extensions` and reload the shop page.
 
-## Как пользоваться
+## Usage
 
-Три способа сохранить картинку:
+Three ways to save an image:
 
-1. **Режим выбора** — клик по иконке расширения → «Выбрать картинки на странице».
-   Картинка под курсором подсвечивается розовой рамкой, клик — сохраняет, `Esc` — выход.
-2. **Горячая клавиша** — `Alt+Shift+P` включает/выключает режим выбора.
-3. **Контекстное меню** — правый клик по любой картинке → «Сохранить картинку в Clothes Picker».
+1. **Pick mode** — click the extension icon → "Pick images on this page".
+   The image under the cursor gets a pink outline; click saves it, `Esc` exits.
+2. **Hotkey** — `Alt+Shift+P` toggles pick mode.
+3. **Context menu** — right-click any image → "Save image to Clothes Picker".
 
-В popup расширения (вкладка **«Вещи»**) видны все сохранённые картинки — количество не ограничено: удалить (×), экспорт в JSON, очистить всё.
-Число на иконке — сколько картинок сохранено.
+The **Items** tab of the popup lists every saved image (no limit): delete (×), export to JSON, clear all.
+The badge on the icon shows how many images are saved.
 
-## Виртуальная примерка (Replicate)
+## Virtual try-on (Replicate)
 
-1. Получи API-токен: https://replicate.com/account/api-tokens
-2. В popup → вкладка **«Настройки»** → вставь токен → «Сохранить и проверить». Токен хранится только в этом браузере.
-3. Вкладка **«Примерки»** → «Загрузить фото» — своё фото в полный рост (сжимается до 1536px и хранится в расширении).
-4. Вкладка **«Вещи»** → кликни по карточке и выбери слот: **Верх**, **Низ** или **Обувь** (в каждый слот — не больше одной вещи; слот ты выбираешь сама, автоматического распознавания нет). Можно заполнить один, два или три слота — для примерки нужна хотя бы одна вещь → «Примерить». Повторный клик по выбранной карточке или × на слоте снимает выбор.
-5. Появится окно подтверждения с твоим фото, выбранными вещами и примерной стоимостью. Запрос в Replicate уходит **только** после нажатия «Примерить» в этом окне; «Отмена» (или Esc) ничего не отправляет.
-6. Результат появится на вкладке «Примерки»: открыть в новой вкладке, скачать, повторить, удалить.
+1. Get an API token: https://replicate.com/account/api-tokens
+2. Popup → **Settings** tab → paste the token → "Save and check". The token is stored only in this browser.
+3. **Try-ons** tab → "Upload photo" — a full-body photo of yourself (resized to 1536 px and kept in the extension).
+4. **Items** tab → click a card and choose a slot: **Top**, **Bottom** or **Shoes** (at most one item per slot;
+   you pick the slot yourself, there is no automatic recognition). Fill one, two or three slots — at least one
+   item is required → "Try on". Clicking a selected card again, or × on the slot, clears the selection.
+5. A confirmation dialog shows your photo, the selected items and the estimated cost. The request is sent to
+   Replicate **only** after you press "Try on" in this dialog; "Cancel" (or Esc) sends nothing.
+6. The result appears on the Try-ons tab: open in a new tab, download, repeat, delete.
 
-Дополнительно: поле «Подсказка модели» (например, `the red dress from image 1`, если на фото несколько вещей) и режим Turbo (быстрее).
+Extras: a "Model hint" field (e.g. `the red dress from image 1` when a photo contains several garments) and a Turbo mode (faster).
 
-Стоимость: $0.015 за первую вещь + $0.008 за каждую следующую (списывается с аккаунта Replicate).
+Cost: $0.015 for the first garment + $0.008 for each additional one (charged to your Replicate account).
 
-### Как это работает
+### How it works
 
 ```
 popup.js  ──START_TRYON──▶  background.js  ──▶  replicate.js
-                              │  1. фото → data URL (≤256 КБ) или POST /v1/files
+                              │  1. photo → data URL (≤256 KB) or POST /v1/files
                               │  2. POST /v1/models/prunaai/p-image-try-on/predictions
                               │     { person_image, garment_images: [url, …], prompt?, turbo? }
-                              │     заголовок Prefer: wait=60
-                              │  3. GET /v1/predictions/{id} каждые 2.5 с до succeeded/failed
-                              │  4. если магазин не отдал картинку (hotlink) — скачиваем сами,
-                              │     заливаем в /v1/files и повторяем
+                              │     header Prefer: wait=60
+                              │  3. GET /v1/predictions/{id} every 2.5 s until succeeded/failed
+                              │  4. if the shop blocks the image (hotlink protection) — download it
+                              │     ourselves, upload to /v1/files and retry
                               ▼
-                 chrome.storage.local.tryons[] → popup перерисовывает результаты
+                 chrome.storage.local.tryons[] → popup re-renders the results
 ```
 
-## Структура
+## Project structure
 
 ```
 extension/
-├── manifest.json   # Manifest V3: permissions, content script, popup, горячая клавиша
-├── background.js   # service worker (ES module): контекстное меню, сохранение, запуск примерок
-├── replicate.js    # клиент Replicate API: files, predictions, polling
-├── content.js      # режим выбора на странице: подсветка и клик по картинке
-├── content.css     # стили рамки/баннера/уведомления на странице
-├── popup.html/css/js  # вкладки «Вещи» / «Примерки» / «Настройки»
+├── manifest.json   # Manifest V3: permissions, content script, popup, hotkey
+├── background.js   # service worker (ES module): context menu, saving, launching try-ons
+├── replicate.js    # Replicate API client: files, predictions, polling
+├── content.js      # pick mode on the page: highlight and click an image
+├── content.css     # styles for the outline / banner / toast on the page
+├── popup.html/css/js  # tabs Items / Try-ons / Settings
 └── icons/
 ```
 
-## Где лежат данные
+## Where the data lives
 
-`chrome.storage.local`, ключ `images`:
+`chrome.storage.local`, key `images`:
 
 ```json
 [
@@ -86,27 +97,30 @@ extension/
     "id": "uuid",
     "src": "https://shop.example/img/dress.jpg",
     "pageUrl": "https://shop.example/item/123",
-    "title": "Платье — Shop",
-    "alt": "Красное платье",
+    "title": "Dress — Shop",
+    "alt": "Red dress",
     "savedAt": 1700000000000,
     "slot": "top"
   }
 ]
 ```
 
-Поле `src` — URL картинки, он передаётся в `garment_images` модели. Поле `slot` (`top` / `bottom` / `shoes`) появляется после того, как ты сама назначила вещи слот — оно только запоминает твой выбор, никакого распознавания нет.
+`src` is the image URL passed to the model as `garment_images`. `slot` (`top` / `bottom` / `shoes`) appears
+once you assign the item to a slot — it only remembers your choice, there is no recognition.
 
-Другие ключи в `chrome.storage.local`:
+Other keys in `chrome.storage.local`:
 
-| Ключ | Что |
+| Key | What |
 |---|---|
-| `profilePhoto` | `{ dataUrl, name, updatedAt }` — твоё фото (JPEG, ≤1536px) |
-| `replicateToken` | API-токен Replicate |
-| `tryons` | `[{ id, status, garments: [{id, src, slot}], prompt, output, error, predictionId, createdAt }]` — история примерок |
+| `profilePhoto` | `{ dataUrl, name, updatedAt }` — your photo (JPEG, ≤1536 px) |
+| `replicateToken` | Replicate API token |
+| `tryons` | `[{ id, status, garments: [{id, src, slot}], prompt, output, error, predictionId, createdAt }]` — try-on history |
 
-## Известные ограничения
+## Known limitations
 
-- Сохраняется ссылка на картинку, а не сам файл. Если магазин блокирует прямые ссылки (hotlink protection), превью в popup может не показаться; для примерки расширение в этом случае само скачает картинку и загрузит её в Replicate.
-- Ссылки на результаты Replicate живут ограниченное время (около часа) — скачивай понравившиеся результаты кнопкой «Скачать».
-- Токен хранится в `chrome.storage.local` в открытом виде — расширение рассчитано на личное использование, не публикуй его с токеном внутри.
-- Режим выбора не работает на служебных страницах Chrome (`chrome://…`) и в Chrome Web Store.
+- The extension stores a link to the image, not the file itself. If the shop blocks direct links (hotlink
+  protection) the preview in the popup may not show; for a try-on the extension downloads the image itself
+  and uploads it to Replicate.
+- Replicate result URLs expire after a limited time (about an hour) — download the results you like with the "Download" button.
+- The token is stored in `chrome.storage.local` in plain text — the extension is meant for personal use, do not publish it with a token inside.
+- Pick mode does not work on Chrome internal pages (`chrome://…`) and in the Chrome Web Store.
