@@ -2,15 +2,23 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
+  <meta name="referrer" content="no-referrer" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <header>
     <h1>Clothes Picker</h1>
-    <button id="toggle" class="primary">Выбрать картинки на странице</button>
-    <p class="hint">Или ПКМ по картинке → «Сохранить картинку в Clothes Picker». Горячая клавиша: Alt+Shift+P</p>
+    <nav class="tabs">
+      <button data-tab="items" class="active">Вещи</button>
+      <button data-tab="tryon">Примерки</button>
+      <button data-tab="settings">Настройки</button>
+    </nav>
   </header>
-  <section>
+
+  <!-- ВЕЩИ -->
+  <section id="tab-items" class="tab active">
+    <button id="toggle" class="primary">Выбрать картинки на странице</button>
+    <p class="hint">Или ПКМ по картинке → «Сохранить картинку в Clothes Picker». Горячая клавиша: Alt+Shift+P.<br>Для примерки кликни по вещи и выбери слот: Верх, Низ или Обувь (по одной вещи в слот).</p>
     <div class="toolbar">
       <span id="count"></span>
       <button id="export">Экспорт JSON</button>
@@ -18,7 +26,79 @@
     </div>
     <div id="grid" class="grid"></div>
     <p id="empty" class="empty">Пока ничего не сохранено</p>
+    <div id="tryon-bar" class="action-bar">
+      <div class="slots" id="slots">
+        <div class="slot" data-slot="top"><div class="slot-thumb"></div><span class="slot-name">Верх</span><button class="slot-clear" title="Убрать">×</button></div>
+        <div class="slot" data-slot="bottom"><div class="slot-thumb"></div><span class="slot-name">Низ</span><button class="slot-clear" title="Убрать">×</button></div>
+        <div class="slot" data-slot="shoes"><div class="slot-thumb"></div><span class="slot-name">Обувь</span><button class="slot-clear" title="Убрать">×</button></div>
+      </div>
+      <div class="action-row">
+        <span id="selected-count">Выбери вещи для примерки</span>
+        <button id="start-tryon" class="primary" disabled>Примерить</button>
+      </div>
+    </div>
   </section>
+
+  <!-- ПРИМЕРКИ -->
+  <section id="tab-tryon" class="tab">
+    <div class="photo-block">
+      <div class="photo-preview" id="photo-preview">
+        <span class="photo-placeholder">Нет фото</span>
+      </div>
+      <div class="photo-actions">
+        <strong>Моё фото</strong>
+        <p class="hint">Фото в полный рост, анфас, однотонный фон — лучший результат.</p>
+        <input type="file" id="photo-input" accept="image/*" hidden />
+        <button id="photo-pick">Загрузить фото</button>
+        <button id="photo-remove" class="danger hidden">Удалить</button>
+      </div>
+    </div>
+    <label class="field">
+      <span>Подсказка модели (необязательно)</span>
+      <input type="text" id="prompt" placeholder="например: the red dress from image 1" />
+    </label>
+    <label class="checkbox"><input type="checkbox" id="turbo" /> Turbo (быстрее, до 4 вещей)</label>
+    <h2>Результаты</h2>
+    <div id="results" class="results"></div>
+    <p id="results-empty" class="empty">Примерок пока нет. Выбери вещи на вкладке «Вещи» и нажми «Примерить».</p>
+  </section>
+
+  <!-- НАСТРОЙКИ -->
+  <section id="tab-settings" class="tab">
+    <label class="field">
+      <span>Replicate API-токен</span>
+      <input type="password" id="token" placeholder="r8_..." autocomplete="off" />
+    </label>
+    <div class="row">
+      <button id="token-save" class="primary">Сохранить и проверить</button>
+      <span id="token-status" class="status"></span>
+    </div>
+    <p class="hint">
+      Токен: <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a>.
+      Хранится только в этом браузере (chrome.storage.local). Модель:
+      <a href="https://replicate.com/prunaai/p-image-try-on" target="_blank">prunaai/p-image-try-on</a>,
+      ≈ $0.015 за примерку с одной вещью (+$0.008 за каждую следующую).
+    </p>
+  </section>
+
+  <!-- ПОДТВЕРЖДЕНИЕ ПРИМЕРКИ -->
+  <div id="confirm" class="confirm hidden">
+    <div class="confirm-box" role="dialog" aria-labelledby="confirm-title">
+      <h3 id="confirm-title">Запустить примерку?</h3>
+      <div class="confirm-row">
+        <div class="confirm-photo" id="confirm-photo"></div>
+        <span class="confirm-plus">+</span>
+        <div class="confirm-garments" id="confirm-garments"></div>
+      </div>
+      <p class="confirm-cost" id="confirm-cost"></p>
+      <p class="hint">Запрос уйдёт в Replicate, стоимость спишется с твоего аккаунта. «Отмена» ничего не отправляет.</p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel">Отмена</button>
+        <button id="confirm-ok" class="primary">Примерить</button>
+      </div>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

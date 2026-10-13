@@ -1,16 +1,33 @@
 {
   "manifest_version": 3,
   "name": "Clothes Picker",
-  "description": "Выбирай картинки одежды на сайтах магазинов и сохраняй их в расширение",
-  "version": "0.1.0",
-  "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
-  "host_permissions": ["<all_urls>"],
-  "background": { "service_worker": "background.js" },
+  "description": "Выбирай картинки одежды на сайтах магазинов, сохраняй их в расширение и примеряй на своё фото через Replicate",
+  "version": "0.2.0",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "contextMenus",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -20,9 +37,15 @@
   },
   "commands": {
     "toggle-picker": {
-      "suggested_key": { "default": "Alt+Shift+P" },
+      "suggested_key": {
+        "default": "Alt+Shift+P"
+      },
       "description": "Включить/выключить режим выбора картинок"
     }
   },
-  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
 }

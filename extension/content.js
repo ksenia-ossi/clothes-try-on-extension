@@ -3,19 +3,41 @@
 let active = false;
 let hovered = null;
 
+// Заглушки lazy-load (data:/blob:, прозрачные 1×1) — не настоящая картинка товара
+function isRealUrl(url) {
+  return !!url && /^https?:/i.test(url);
+}
+
+function largestFromSrcset(srcset) {
+  let best = null;
+  for (const part of srcset.split(",")) {
+    const [url, desc] = part.trim().split(/\s+/);
+    const size = desc ? parseFloat(desc) : 1;
+    if (isRealUrl(url) && (!best || size > best.size)) best = { url, size };
+  }
+  return best?.url || null;
+}
+
 function getImageSrc(el) {
   if (el.tagName === "IMG") {
-    // берём самый большой вариант из srcset, если есть
-    if (el.currentSrc) return el.currentSrc;
-    return el.src;
+    // если IMG ещё показывает крошечную заглушку, настоящий адрес лежит в data-атрибутах
+    const tiny = el.naturalWidth > 0 && el.naturalWidth < 40 && el.naturalHeight < 40;
+    const lazy = [el.dataset.src, el.dataset.original, el.dataset.lazySrc];
+    const live = [el.srcset && largestFromSrcset(el.srcset), el.currentSrc, el.src];
+    const candidates = tiny ? lazy : [...live, ...lazy];
+    for (const c of candidates) {
+      if (isRealUrl(c)) return c;
+    }
+    return null;
   }
+
   if (el.tagName === "PICTURE") {
     const img = el.querySelector("img");
     return img ? getImageSrc(img) : null;
   }
   const bg = getComputedStyle(el).backgroundImage;
   const m = bg && bg.match(/url\(["']?(.*?)["']?\)/);
-  return m ? m[1] : null;
+  return m && isRealUrl(m[1]) ? m[1] : null;
 }
 
 function findImageTarget(el) {
