@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="referrer" content="no-referrer" />
@@ -18,11 +18,11 @@
   <!-- ITEMS -->
   <section id="tab-items" class="tab active">
     <button id="toggle" class="primary">Pick images on this page</button>
-    <p class="hint">Or right-click an image → “Save image to Clothes Picker”. Hotkey: Alt+Shift+P.<br>For a try-on, click an item and choose a slot: Top, Bottom or Shoes (one item per slot).</p>
+    <p class="hint">Or right-click any image · Alt+Shift+P. Click a saved item to choose its slot.</p>
     <div class="toolbar">
       <span id="count"></span>
       <button id="export">Export JSON</button>
-      <button id="clear" class="danger">Clear all</button>
+      <button id="clear" class="danger">Clear</button>
     </div>
     <div id="grid" class="grid"></div>
     <p id="empty" class="empty">Nothing saved yet</p>
@@ -30,10 +30,9 @@
       <div class="slots" id="slots">
         <div class="slot" data-slot="top"><div class="slot-thumb"></div><span class="slot-name">Top</span><button class="slot-clear" title="Remove">×</button></div>
         <div class="slot" data-slot="bottom"><div class="slot-thumb"></div><span class="slot-name">Bottom</span><button class="slot-clear" title="Remove">×</button></div>
-        <div class="slot" data-slot="shoes"><div class="slot-thumb"></div><span class="slot-name">Shoes</span><button class="slot-clear" title="Remove">×</button></div>
       </div>
       <div class="action-row">
-        <span id="selected-count">Select items to try on</span>
+        <span id="selected-count">Select a top and/or a bottom</span>
         <button id="start-tryon" class="primary" disabled>Try on</button>
       </div>
     </div>
@@ -47,20 +46,20 @@
       </div>
       <div class="photo-actions">
         <strong>My photo</strong>
-        <p class="hint">A full-body, front-facing photo on a plain background gives the best result.</p>
+        <p class="hint">Full-body photo, plain background.</p>
         <input type="file" id="photo-input" accept="image/*" hidden />
         <button id="photo-pick">Upload photo</button>
         <button id="photo-remove" class="danger hidden">Remove</button>
       </div>
     </div>
     <label class="field">
-      <span>Model hint (optional)</span>
+      <span>Hint (optional)</span>
       <input type="text" id="prompt" placeholder="e.g. the red dress from image 1" />
     </label>
-    <label class="checkbox"><input type="checkbox" id="turbo" /> Turbo (faster, up to 4 items)</label>
+    <label class="checkbox"><input type="checkbox" id="turbo" /> Turbo (faster)</label>
     <h2>Results</h2>
     <div id="results" class="results"></div>
-    <p id="results-empty" class="empty">No try-ons yet. Select items on the Items tab and press “Try on”.</p>
+    <p id="results-empty" class="empty">No try-ons yet</p>
   </section>
 
   <!-- SETTINGS -->
@@ -70,28 +69,26 @@
       <input type="password" id="token" placeholder="r8_..." autocomplete="off" />
     </label>
     <div class="row">
-      <button id="token-save" class="primary">Save and check</button>
+      <button id="token-save" class="primary">Save</button>
       <span id="token-status" class="status"></span>
     </div>
     <p class="hint">
-      Token: <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com/account/api-tokens</a>.
-      Stored only in this browser (chrome.storage.local). Model:
-      <a href="https://replicate.com/prunaai/p-image-try-on" target="_blank">prunaai/p-image-try-on</a>,
-      ≈ $0.015 per try-on with one item (+$0.008 for each additional one).
+      Get a token at <a href="https://replicate.com/account/api-tokens" target="_blank">replicate.com</a>.
+      Stored only in this browser. ≈ $0.015–0.023 per try-on.
     </p>
   </section>
 
   <!-- TRY-ON CONFIRMATION -->
   <div id="confirm" class="confirm hidden">
     <div class="confirm-box" role="dialog" aria-labelledby="confirm-title">
-      <h3 id="confirm-title">Start the try-on?</h3>
+      <h3 id="confirm-title">Try on?</h3>
       <div class="confirm-row">
         <div class="confirm-photo" id="confirm-photo"></div>
         <span class="confirm-plus">+</span>
         <div class="confirm-garments" id="confirm-garments"></div>
       </div>
       <p class="confirm-cost" id="confirm-cost"></p>
-      <p class="hint">The request goes to Replicate and the cost is charged to your account. “Cancel” sends nothing.</p>
+      <p class="hint">Charged to your Replicate account.</p>
       <div class="confirm-actions">
         <button id="confirm-cancel">Cancel</button>
         <button id="confirm-ok" class="primary">Try on</button>

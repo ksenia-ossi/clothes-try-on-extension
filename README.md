@@ -46,8 +46,8 @@ The badge on the icon shows how many images are saved.
 1. Get an API token: https://replicate.com/account/api-tokens
 2. Popup → **Settings** tab → paste the token → "Save and check". The token is stored only in this browser.
 3. **Try-ons** tab → "Upload photo" — a full-body photo of yourself (resized to 1536 px and kept in the extension).
-4. **Items** tab → click a card and choose a slot: **Top**, **Bottom** or **Shoes** (at most one item per slot;
-   you pick the slot yourself, there is no automatic recognition). Fill one, two or three slots — at least one
+4. **Items** tab → click a card and choose a slot: **Top** or **Bottom** (at most one item per slot;
+   you pick the slot yourself, there is no automatic recognition). Fill one or both slots — at least one
    item is required → "Try on". Clicking a selected card again, or × on the slot, clears the selection.
 5. A confirmation dialog shows your photo, the selected items and the estimated cost. The request is sent to
    Replicate **only** after you press "Try on" in this dialog; "Cancel" (or Esc) sends nothing.
@@ -103,7 +103,7 @@ extension/
 ]
 ```
 
-`src` is the image URL passed to the model as `garment_images`. `slot` (`top` / `bottom` / `shoes`) appears
+`src` is the image URL passed to the model as `garment_images`. `slot` (`top` / `bottom`) appears
 once you assign the item to a slot — it only remembers your choice, there is no recognition.
 
 Other keys in `chrome.storage.local`:

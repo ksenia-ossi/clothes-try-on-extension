@@ -109,7 +109,7 @@ function updateJob(id, patch) {
   return write;
 }
 
-const SLOTS = ["top", "bottom", "shoes"];
+const SLOTS = ["top", "bottom"];
 
 async function startTryOn({ slots = {}, prompt, turbo }) {
   const { images = [], profilePhoto, replicateToken, tryons = [] } = await chrome.storage.local.get([
@@ -120,7 +120,7 @@ async function startTryOn({ slots = {}, prompt, turbo }) {
   ]);
   if (!replicateToken) return { ok: false, error: "No Replicate API token — add it in Settings" };
   if (!profilePhoto?.dataUrl) return { ok: false, error: "Upload your photo first" };
-  // one item per slot (Top / Bottom / Shoes), 1 to 3 items
+  // one item per slot (Top / Bottom), 1 or 2 items
   const garments = [];
   for (const slot of SLOTS) {
     if (!slots[slot]) continue;

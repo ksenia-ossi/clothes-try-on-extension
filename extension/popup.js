@@ -3,9 +3,9 @@ const $ = (sel) => document.querySelector(sel);
 const MAX_PHOTO_SIDE = 1536;
 
 // Try-on slots: at most one item in each, at least one filled
-const SLOTS = ["top", "bottom", "shoes"];
-const SLOT_NAMES = { top: "Top", bottom: "Bottom", shoes: "Shoes" };
-const slotSelection = { top: null, bottom: null, shoes: null }; // slot → image id
+const SLOTS = ["top", "bottom"];
+const SLOT_NAMES = { top: "Top", bottom: "Bottom" };
+const slotSelection = { top: null, bottom: null }; // slot → image id
 let openMenuCardId = null;
 
 // ---------- tabs ----------
@@ -37,7 +37,7 @@ async function renderImages() {
   const grid = $("#grid");
   grid.innerHTML = "";
   $("#empty").style.display = images.length ? "none" : "block";
-  $("#count").textContent = images.length ? `Saved: ${images.length}` : "";
+  $("#count").textContent = images.length ? `${images.length} saved` : "";
   for (const slot of SLOTS) if (slotSelection[slot] && !images.some((i) => i.id === slotSelection[slot])) slotSelection[slot] = null;
   if (openMenuCardId && !images.some((i) => i.id === openMenuCardId)) openMenuCardId = null;
 
@@ -120,8 +120,8 @@ function renderSlots(images) {
   }
   $("#start-tryon").disabled = filled === 0;
   $("#selected-count").textContent = filled
-    ? `Selected: ${filled} of 3`
-    : "Select at least one item";
+    ? `${filled} of 2 selected`
+    : "Select a top and/or a bottom";
 }
 
 document.querySelectorAll("#slots .slot-clear").forEach((btn) => {
@@ -347,7 +347,7 @@ async function downloadResult(job) {
 }
 
 async function retry(job, images) {
-  const slots = { top: null, bottom: null, shoes: null };
+  const slots = { top: null, bottom: null };
   for (const g of job.garments) {
     if (g.slot && images.some((i) => i.id === g.id)) slots[g.slot] = g.id;
   }
