@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clothes Picker",
-  "description": "Выбирай картинки одежды на сайтах магазинов, сохраняй их в расширение и примеряй на своё фото через Replicate",
+  "description": "Pick clothing images on shop sites, save them into the extension and try them on your own photo via Replicate",
   "version": "0.2.0",
   "permissions": [
     "storage",
@@ -40,7 +40,7 @@
       "suggested_key": {
         "default": "Alt+Shift+P"
       },
-      "description": "Включить/выключить режим выбора картинок"
+      "description": "Toggle image pick mode"
     }
   },
   "icons": {

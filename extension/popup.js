@@ -2,13 +2,13 @@ const $ = (sel) => document.querySelector(sel);
 
 const MAX_PHOTO_SIDE = 1536;
 
-// Слоты примерки: не больше одной вещи в каждом, хотя бы один заполнен
+// Try-on slots: at most one item in each, at least one filled
 const SLOTS = ["top", "bottom", "shoes"];
-const SLOT_NAMES = { top: "Верх", bottom: "Низ", shoes: "Обувь" };
+const SLOT_NAMES = { top: "Top", bottom: "Bottom", shoes: "Shoes" };
 const slotSelection = { top: null, bottom: null, shoes: null }; // slot → image id
 let openMenuCardId = null;
 
-// ---------- вкладки ----------
+// ---------- tabs ----------
 
 document.querySelectorAll(".tabs button").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -22,7 +22,7 @@ function showTab(name) {
   document.querySelector(`.tabs button[data-tab="${name}"]`)?.click();
 }
 
-// ---------- вещи ----------
+// ---------- items ----------
 
 function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
@@ -37,7 +37,7 @@ async function renderImages() {
   const grid = $("#grid");
   grid.innerHTML = "";
   $("#empty").style.display = images.length ? "none" : "block";
-  $("#count").textContent = images.length ? `Сохранено: ${images.length}` : "";
+  $("#count").textContent = images.length ? `Saved: ${images.length}` : "";
   for (const slot of SLOTS) if (slotSelection[slot] && !images.some((i) => i.id === slotSelection[slot])) slotSelection[slot] = null;
   if (openMenuCardId && !images.some((i) => i.id === openMenuCardId)) openMenuCardId = null;
 
@@ -50,7 +50,7 @@ async function renderImages() {
     card.innerHTML = `
       <img src="${item.src}" alt="" loading="lazy" />
       ${badgeSlot ? `<div class="badge">${SLOT_NAMES[badgeSlot]}</div>` : ""}
-      <button class="del" title="Удалить">×</button>
+      <button class="del" title="Delete">×</button>
       <a href="${item.pageUrl}" target="_blank" title="${item.pageUrl}">${hostOf(item.pageUrl)}</a>`;
     if (openMenuCardId === item.id) card.appendChild(buildSlotMenu(item));
     card.addEventListener("click", (e) => {
@@ -66,7 +66,7 @@ async function renderImages() {
 function buildSlotMenu(item) {
   const menu = document.createElement("div");
   menu.className = "slot-menu";
-  menu.innerHTML = `<div class="slot-menu-title">В какой слот?</div>`;
+  menu.innerHTML = `<div class="slot-menu-title">Which slot?</div>`;
   for (const slot of SLOTS) {
     const b = document.createElement("button");
     b.textContent = SLOT_NAMES[slot];
@@ -76,7 +76,7 @@ function buildSlotMenu(item) {
     menu.appendChild(b);
   }
   const cancel = document.createElement("button");
-  cancel.textContent = "Отмена";
+  cancel.textContent = "Cancel";
   cancel.addEventListener("click", () => { openMenuCardId = null; renderImages(); });
   menu.appendChild(cancel);
   return menu;
@@ -85,7 +85,7 @@ function buildSlotMenu(item) {
 function onCardClick(item) {
   const inSlot = slotOf(item.id);
   if (inSlot) {
-    slotSelection[inSlot] = null; // повторный клик снимает выбор
+    slotSelection[inSlot] = null; // clicking again deselects
     openMenuCardId = null;
   } else {
     openMenuCardId = openMenuCardId === item.id ? null : item.id;
@@ -97,13 +97,13 @@ async function assignToSlot(item, slot) {
   slotSelection[slot] = item.id;
   openMenuCardId = null;
   if (item.slot !== slot) {
-    // запоминаем выбранный слот у вещи — без автораспознавания, только то, что указала ты
+    // remember the chosen slot on the item — no auto-recognition, only what the user picked
     const { images = [] } = await chrome.storage.local.get("images");
     const idx = images.findIndex((i) => i.id === item.id);
     if (idx !== -1) {
       images[idx] = { ...images[idx], slot };
       await chrome.storage.local.set({ images });
-      return; // storage.onChanged перерисует
+      return; // storage.onChanged re-renders
     }
   }
   renderImages();
@@ -120,8 +120,8 @@ function renderSlots(images) {
   }
   $("#start-tryon").disabled = filled === 0;
   $("#selected-count").textContent = filled
-    ? `Выбрано: ${filled} из 3`
-    : "Выбери хотя бы одну вещь";
+    ? `Selected: ${filled} of 3`
+    : "Select at least one item";
 }
 
 document.querySelectorAll("#slots .slot-clear").forEach((btn) => {
@@ -144,7 +144,7 @@ $("#toggle").addEventListener("click", () => {
 });
 
 $("#clear").addEventListener("click", async () => {
-  if (!confirm("Удалить все сохранённые картинки?")) return;
+  if (!confirm("Delete all saved images?")) return;
   await chrome.storage.local.set({ images: [] });
   chrome.action.setBadgeText({ text: "" });
 });
@@ -161,11 +161,11 @@ function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ---------- запуск примерки ----------
+// ---------- starting a try-on ----------
 
 $("#start-tryon").addEventListener("click", async () => {
   const { profilePhoto, replicateToken } = await chrome.storage.local.get(["profilePhoto", "replicateToken"]);
-  if (!replicateToken) { showTab("settings"); setTokenStatus("Сначала добавь API-токен Replicate", "err"); return; }
+  if (!replicateToken) { showTab("settings"); setTokenStatus("Add your Replicate API token first", "err"); return; }
   if (!profilePhoto?.dataUrl) { showTab("tryon"); $("#photo-pick").focus(); return; }
 
   openConfirm({
@@ -176,8 +176,8 @@ $("#start-tryon").addEventListener("click", async () => {
   });
 });
 
-// ---------- подтверждение примерки ----------
-// Запрос в Replicate уходит только после нажатия «Примерить» в этом окне; «Отмена» ничего не отправляет.
+// ---------- try-on confirmation ----------
+// The request goes to Replicate only after pressing "Try on" in this dialog; "Cancel" sends nothing.
 
 const PRICE_FIRST = 0.015;
 const PRICE_EXTRA = 0.008;
@@ -193,16 +193,16 @@ async function openConfirm(payload) {
     const item = images.find((i) => i.id === payload.slots[slot]);
     return item ? { ...item, slot } : null;
   }).filter(Boolean);
-  if (!garments.length) { alert("Выбери хотя бы одну вещь"); return; }
+  if (!garments.length) { alert("Select at least one item"); return; }
 
   pendingTryOn = payload;
-  $("#confirm-photo").innerHTML = profilePhoto?.dataUrl ? `<img src="${profilePhoto.dataUrl}" alt="Моё фото" />` : "";
+  $("#confirm-photo").innerHTML = profilePhoto?.dataUrl ? `<img src="${profilePhoto.dataUrl}" alt="My photo" />` : "";
   $("#confirm-garments").innerHTML = garments
     .map((g) => `<div class="confirm-garment"><img src="${g.src}" alt="" title="${g.src}" /><span>${SLOT_NAMES[g.slot]}</span></div>`)
     .join("");
   const n = garments.length;
   $("#confirm-cost").innerHTML =
-    `${n} ${plural(n, "вещь", "вещи", "вещей")}${payload.turbo ? " · Turbo" : ""} · ≈ <strong>$${estimateCost(n).toFixed(3)}</strong>`;
+    `${n} ${n === 1 ? "item" : "items"}${payload.turbo ? " · Turbo" : ""} · ≈ <strong>$${estimateCost(n).toFixed(3)}</strong>`;
   $("#confirm").classList.remove("hidden");
   $("#confirm-ok").focus();
 }
@@ -226,18 +226,12 @@ $("#confirm-ok").addEventListener("click", async () => {
   const res = await chrome.runtime.sendMessage({ type: "START_TRYON", payload: { slots, prompt, turbo } });
   btn.disabled = false;
   closeConfirm();
-  if (!res?.ok) { alert(res?.error || "Не удалось запустить примерку"); return; }
+  if (!res?.ok) { alert(res?.error || "Could not start the try-on"); return; }
   onStarted?.();
 });
 
-function plural(n, one, few, many) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
-}
 
-// ---------- моё фото ----------
+// ---------- my photo ----------
 
 $("#photo-pick").addEventListener("click", () => $("#photo-input").click());
 $("#photo-input").addEventListener("change", async (e) => {
@@ -248,7 +242,7 @@ $("#photo-input").addEventListener("change", async (e) => {
     const dataUrl = await resizeImage(file, MAX_PHOTO_SIDE);
     await chrome.storage.local.set({ profilePhoto: { dataUrl, name: file.name, updatedAt: Date.now() } });
   } catch (err) {
-    alert("Не удалось обработать фото: " + err.message);
+    alert("Could not process the photo: " + err.message);
   }
 });
 $("#photo-remove").addEventListener("click", () => chrome.storage.local.remove("profilePhoto"));
@@ -268,26 +262,26 @@ async function renderPhoto() {
   const { profilePhoto } = await chrome.storage.local.get("profilePhoto");
   const preview = $("#photo-preview");
   if (profilePhoto?.dataUrl) {
-    preview.innerHTML = `<img src="${profilePhoto.dataUrl}" alt="Моё фото" />`;
-    $("#photo-pick").textContent = "Заменить фото";
+    preview.innerHTML = `<img src="${profilePhoto.dataUrl}" alt="My photo" />`;
+    $("#photo-pick").textContent = "Replace photo";
     $("#photo-remove").classList.remove("hidden");
   } else {
-    preview.innerHTML = `<span class="photo-placeholder">Нет фото</span>`;
-    $("#photo-pick").textContent = "Загрузить фото";
+    preview.innerHTML = `<span class="photo-placeholder">No photo</span>`;
+    $("#photo-pick").textContent = "Upload photo";
     $("#photo-remove").classList.add("hidden");
   }
 }
 
-// ---------- результаты ----------
+// ---------- results ----------
 
 const STATUS_TEXT = {
-  starting: "Запускаю…",
-  uploading: "Загружаю фото…",
-  processing: "Модель работает…",
-  saving: "Сохраняю результат…",
-  succeeded: "Готово",
-  failed: "Ошибка",
-  canceled: "Отменено",
+  starting: "Starting…",
+  uploading: "Uploading photo…",
+  processing: "Model is running…",
+  saving: "Saving result…",
+  succeeded: "Done",
+  failed: "Error",
+  canceled: "Canceled",
 };
 
 async function renderResults() {
@@ -302,7 +296,7 @@ async function renderResults() {
     const failed = job.status === "failed" || job.status === "canceled";
     const busy = !done && !failed;
     el.innerHTML = `
-      <div class="out">${done ? `<img src="${resultSrc(job)}" alt="Результат" />` : failed ? "✕" : `<span class="spinner"></span>`}</div>
+      <div class="out">${done ? `<img src="${resultSrc(job)}" alt="Result" />` : failed ? "✕" : `<span class="spinner"></span>`}</div>
       <div class="meta">
         <div class="garments">${job.garments.map((g) => `<img src="${g.src}" alt="" title="${g.slot ? SLOT_NAMES[g.slot] + ": " : ""}${g.src}" />`).join("")}</div>
         <div class="status-line ${failed ? "err" : ""}">
@@ -315,12 +309,12 @@ async function renderResults() {
     const links = el.querySelector(".links");
     if (done) {
       links.append(
-        button("Открыть", () => chrome.tabs.create({ url: chrome.runtime.getURL(`result.html?id=${job.id}`) })),
-        button("Скачать", () => downloadResult(job)),
+        button("Open", () => chrome.tabs.create({ url: chrome.runtime.getURL(`result.html?id=${job.id}`) })),
+        button("Download", () => downloadResult(job)),
       );
     }
-    if (failed) links.append(button("Повторить", () => retry(job, images)));
-    links.append(button("Удалить", () => removeJob(job.id), "danger"));
+    if (failed) links.append(button("Retry", () => retry(job, images)));
+    links.append(button("Delete", () => removeJob(job.id), "danger"));
     box.appendChild(el);
   }
 }
@@ -337,7 +331,7 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// Локальная копия результата, если успели сохранить; иначе временная ссылка Replicate
+// Local copy of the result if it was stored; otherwise the temporary Replicate link
 function resultSrc(job) {
   return job.outputDataUrl || job.output;
 }
@@ -357,7 +351,7 @@ async function retry(job, images) {
   for (const g of job.garments) {
     if (g.slot && images.some((i) => i.id === g.id)) slots[g.slot] = g.id;
   }
-  if (!Object.values(slots).some(Boolean)) { alert("Вещи этой примерки уже удалены"); return; }
+  if (!Object.values(slots).some(Boolean)) { alert("The items of this try-on have been deleted"); return; }
   openConfirm({ slots, prompt: job.prompt, turbo: $("#turbo").checked });
 }
 
@@ -366,7 +360,7 @@ async function removeJob(id) {
   await chrome.storage.local.set({ tryons: tryons.filter((t) => t.id !== id) });
 }
 
-// ---------- настройки ----------
+// ---------- settings ----------
 
 function setTokenStatus(text, cls = "") {
   const s = $("#token-status");
@@ -378,16 +372,16 @@ $("#token-save").addEventListener("click", async () => {
   const token = $("#token").value.trim();
   if (!token) {
     await chrome.storage.local.remove("replicateToken");
-    setTokenStatus("Токен удалён");
+    setTokenStatus("Token removed");
     return;
   }
-  setTokenStatus("Проверяю…");
+  setTokenStatus("Checking…");
   const res = await chrome.runtime.sendMessage({ type: "VERIFY_TOKEN", token });
   if (res?.ok) {
     await chrome.storage.local.set({ replicateToken: token });
-    setTokenStatus(`Сохранено · аккаунт ${res.username}`, "ok");
+    setTokenStatus(`Saved · account ${res.username}`, "ok");
   } else {
-    setTokenStatus(res?.error || "Токен не подошёл", "err");
+    setTokenStatus(res?.error || "Token was rejected", "err");
   }
 });
 
@@ -395,7 +389,7 @@ async function renderSettings() {
   const { replicateToken } = await chrome.storage.local.get("replicateToken");
   if (replicateToken) {
     $("#token").value = replicateToken;
-    setTokenStatus("Токен сохранён", "ok");
+    setTokenStatus("Token saved", "ok");
   }
 }
 

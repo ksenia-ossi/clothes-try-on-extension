@@ -1,9 +1,9 @@
-// Режим выбора: подсветка картинки под курсором, клик = сохранить
+// Pick mode: highlight the image under the cursor, click = save
 
 let active = false;
 let hovered = null;
 
-// Заглушки lazy-load (data:/blob:, прозрачные 1×1) — не настоящая картинка товара
+// Lazy-load placeholders (data:/blob:, transparent 1×1) are not the real product image
 function isRealUrl(url) {
   return !!url && /^https?:/i.test(url);
 }
@@ -20,7 +20,7 @@ function largestFromSrcset(srcset) {
 
 function getImageSrc(el) {
   if (el.tagName === "IMG") {
-    // если IMG ещё показывает крошечную заглушку, настоящий адрес лежит в data-атрибутах
+    // if the IMG still shows a tiny placeholder, the real URL lives in data-attributes
     const tiny = el.naturalWidth > 0 && el.naturalWidth < 40 && el.naturalHeight < 40;
     const lazy = [el.dataset.src, el.dataset.original, el.dataset.lazySrc];
     const live = [el.srcset && largestFromSrcset(el.srcset), el.currentSrc, el.src];
@@ -41,7 +41,7 @@ function getImageSrc(el) {
 }
 
 function findImageTarget(el) {
-  // ищем картинку в самом элементе или в ближайших предках (карточки товаров часто с оверлеями)
+  // look for an image in the element itself or its nearest ancestors (product cards often have overlays)
   let node = el;
   for (let i = 0; node && i < 4; i++) {
     const src = getImageSrc(node);
@@ -80,9 +80,9 @@ function onClick(e) {
       },
     },
     (res) => {
-      if (res?.ok) toast("Сохранено ✓");
-      else if (res?.reason === "duplicate") toast("Уже сохранено");
-      else toast("Не удалось сохранить");
+      if (res?.ok) toast("Saved ✓");
+      else if (res?.reason === "duplicate") toast("Already saved");
+      else toast("Could not save");
     }
   );
 }
@@ -112,7 +112,7 @@ function showBanner() {
   if (document.getElementById("cp-banner")) return;
   const b = document.createElement("div");
   b.id = "cp-banner";
-  b.textContent = "Режим выбора: кликни по картинке, чтобы сохранить. Esc — выйти";
+  b.textContent = "Pick mode: click an image to save it. Esc — exit";
   document.body.appendChild(b);
 }
 

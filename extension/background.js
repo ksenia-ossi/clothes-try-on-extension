@@ -1,4 +1,4 @@
-// Service worker: контекстное меню, горячая клавиша, сохранение картинок, примерка через Replicate
+// Service worker: context menu, hotkey, saving images, try-on via Replicate
 
 import {
   toInputUrl,
@@ -16,7 +16,7 @@ const MENU_ID = "clothes-picker-save";
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: MENU_ID,
-    title: "Сохранить картинку в Clothes Picker",
+    title: "Save image to Clothes Picker",
     contexts: ["image"],
   });
 });
@@ -31,7 +31,7 @@ chrome.commands.onCommand.addListener((command, tab) => {
   if (command === "toggle-picker" && tab?.id) togglePicker(tab.id);
 });
 
-// Вкладки, открытые до установки/обновления расширения, не содержат content.js — подгружаем его сами
+// Tabs opened before the extension was installed/updated have no content.js — inject it ourselves
 async function togglePicker(tabId) {
   try {
     await chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PICKER" });
@@ -41,7 +41,7 @@ async function togglePicker(tabId) {
       await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
       await chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PICKER" });
     } catch {
-      // служебные страницы (chrome://, Web Store) — туда скрипты не пускают
+      // internal pages (chrome://, Web Store) don't allow script injection
     }
   }
 }
@@ -69,7 +69,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// ---------- сохранение картинок ----------
+// ---------- saving images ----------
 
 async function saveImage({ src, pageUrl, title, alt }) {
   if (!src) return { ok: false, reason: "no-src" };
@@ -93,9 +93,9 @@ chrome.storage.local.get("images").then(({ images = [] }) => {
   chrome.action.setBadgeText({ text: images.length ? String(images.length) : "" });
 });
 
-// ---------- примерка ----------
+// ---------- try-on ----------
 
-// Записи в tryons идут по очереди: параллельные read-modify-write затирали бы друг друга
+// Writes to tryons are serialized: concurrent read-modify-write would clobber each other
 let jobWrites = Promise.resolve();
 function updateJob(id, patch) {
   const write = jobWrites.then(async () => {
@@ -118,18 +118,18 @@ async function startTryOn({ slots = {}, prompt, turbo }) {
     "replicateToken",
     "tryons",
   ]);
-  if (!replicateToken) return { ok: false, error: "Нет API-токена Replicate — добавь его в настройках" };
-  if (!profilePhoto?.dataUrl) return { ok: false, error: "Сначала загрузи своё фото" };
-  // по одной вещи на слот (Верх / Низ / Обувь), от 1 до 3 вещей
+  if (!replicateToken) return { ok: false, error: "No Replicate API token — add it in Settings" };
+  if (!profilePhoto?.dataUrl) return { ok: false, error: "Upload your photo first" };
+  // one item per slot (Top / Bottom / Shoes), 1 to 3 items
   const garments = [];
   for (const slot of SLOTS) {
     if (!slots[slot]) continue;
     const item = images.find((i) => i.id === slots[slot]);
-    if (!item) return { ok: false, error: `Вещь для слота «${slot}» не найдена` };
-    if (garments.some((g) => g.id === item.id)) return { ok: false, error: "Одна вещь не может занимать два слота" };
+    if (!item) return { ok: false, error: `Item for slot "${slot}" not found` };
+    if (garments.some((g) => g.id === item.id)) return { ok: false, error: "One item cannot occupy two slots" };
     garments.push({ ...item, slot });
   }
-  if (!garments.length) return { ok: false, error: "Выбери хотя бы одну вещь" };
+  if (!garments.length) return { ok: false, error: "Select at least one item" };
 
   const job = {
     id: crypto.randomUUID(),
@@ -166,8 +166,8 @@ async function runTryOn(job, { token, personDataUrl, turbo }) {
     prediction = await runOnce(job, token, makeInput(job.garments.map((g) => g.src)));
   } catch (e) {
     if (!looksLikeFetchProblem(e)) throw e;
-    // Магазин не отдал картинку Replicate (hotlink-защита) — скачиваем сами и заливаем
-    await updateJob(job.id, { status: "uploading", note: "Перезаливаю картинки вещей…" });
+    // The shop blocked Replicate from fetching the image (hotlink protection) — download and upload it ourselves
+    await updateJob(job.id, { status: "uploading", note: "Re-uploading garment images…" });
     const urls = [];
     for (const g of job.garments) urls.push(await reuploadRemoteImage(token, g.src));
     prediction = await runOnce(job, token, makeInput(urls));
@@ -176,34 +176,34 @@ async function runTryOn(job, { token, personDataUrl, turbo }) {
   await finishJob(job.id, prediction);
 }
 
-// Сохраняем результат локально: ссылка Replicate протухает примерно через час
+// Keep the result locally: Replicate links expire after about an hour
 async function finishJob(jobId, prediction) {
   const output = firstOutputUrl(prediction.output);
-  if (!output) throw new Error("Модель не вернула картинку");
+  if (!output) throw new Error("The model returned no image");
   await updateJob(jobId, { status: "saving", output, note: null, metrics: prediction.metrics || null });
   let outputDataUrl = null;
   try {
     outputDataUrl = await fetchAsDataUrl(output);
   } catch (e) {
-    console.warn("Не удалось сохранить результат локально", e);
+    console.warn("Could not store the result locally", e);
   }
   await updateJob(jobId, { status: "succeeded", outputDataUrl });
 }
 
-// Service worker могли усыпить посреди примерки — при старте дожидаемся незавершённых предсказаний
+// The service worker may have been suspended mid try-on — on start, finish waiting for unfinished predictions
 async function resumeUnfinished() {
   const { tryons = [], replicateToken } = await chrome.storage.local.get(["tryons", "replicateToken"]);
   for (const job of tryons) {
     const unfinished = ["starting", "uploading", "processing", "saving"].includes(job.status);
     if (!unfinished) continue;
     if (!job.predictionId || !replicateToken) {
-      await updateJob(job.id, { status: "failed", error: "Примерка прервалась до отправки — нажми «Повторить»" });
+      await updateJob(job.id, { status: "failed", error: "Try-on was interrupted before sending — press \"Retry\"" });
       continue;
     }
     getPrediction(replicateToken, job.predictionId)
       .then((p) => waitForPrediction(replicateToken, p, (u) => updateJob(job.id, { status: u.status })))
       .then((p) => {
-        if (p.status !== "succeeded") throw new Error(p.error || `Статус: ${p.status}`);
+        if (p.status !== "succeeded") throw new Error(p.error || `Status: ${p.status}`);
         return finishJob(job.id, p);
       })
       .catch((e) => updateJob(job.id, { status: "failed", error: e.message }));
@@ -217,7 +217,7 @@ async function runOnce(job, token, input) {
   await updateJob(job.id, { predictionId: prediction.id });
   prediction = await waitForPrediction(token, prediction, (p) => updateJob(job.id, { status: p.status }));
   if (prediction.status !== "succeeded") {
-    throw new Error(prediction.error || `Статус: ${prediction.status}`);
+    throw new Error(prediction.error || `Status: ${prediction.status}`);
   }
   return prediction;
 }

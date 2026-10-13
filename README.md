@@ -16,8 +16,6 @@ Vanilla JavaScript, no build step, no backend — everything runs in the browser
 | 2 | Upload your own photo and run a virtual try-on through Replicate | ✅ done |
 | 3 | Try-on history inside the extension (open / download / repeat / delete) | ✅ done |
 
-The popup UI is in Russian (tabs **«Вещи»** = Items, **«Примерки»** = Try-ons, **«Настройки»** = Settings).
-
 ## Install (developer mode)
 
 1. Clone the repository:

@@ -1,4 +1,4 @@
-// Полноэкранный просмотр результата из локального хранилища (ссылки Replicate временные)
+// Full-page view of a result from local storage (Replicate links are temporary)
 (async () => {
   const id = new URLSearchParams(location.search).get("id");
   const { tryons = [] } = await chrome.storage.local.get("tryons");
@@ -6,7 +6,7 @@
   const msg = document.getElementById("msg");
   const src = job?.outputDataUrl || job?.output;
   if (!src) {
-    msg.textContent = "Результат не найден — возможно, примерка удалена";
+    msg.textContent = "Result not found — the try-on may have been deleted";
     return;
   }
   const img = document.getElementById("img");
