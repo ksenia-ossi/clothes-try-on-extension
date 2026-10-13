@@ -32,10 +32,6 @@ function slotOf(id) {
   return SLOTS.find((slot) => slotSelection[slot] === id) || null;
 }
 
-function selectedIds() {
-  return SLOTS.map((slot) => slotSelection[slot]).filter(Boolean);
-}
-
 async function renderImages() {
   const { images = [] } = await chrome.storage.local.get("images");
   const grid = $("#grid");
@@ -288,6 +284,7 @@ const STATUS_TEXT = {
   starting: "Запускаю…",
   uploading: "Загружаю фото…",
   processing: "Модель работает…",
+  saving: "Сохраняю результат…",
   succeeded: "Готово",
   failed: "Ошибка",
   canceled: "Отменено",
@@ -305,7 +302,7 @@ async function renderResults() {
     const failed = job.status === "failed" || job.status === "canceled";
     const busy = !done && !failed;
     el.innerHTML = `
-      <div class="out">${done ? `<img src="${job.output}" alt="Результат" />` : failed ? "✕" : `<span class="spinner"></span>`}</div>
+      <div class="out">${done ? `<img src="${resultSrc(job)}" alt="Результат" />` : failed ? "✕" : `<span class="spinner"></span>`}</div>
       <div class="meta">
         <div class="garments">${job.garments.map((g) => `<img src="${g.src}" alt="" title="${g.slot ? SLOT_NAMES[g.slot] + ": " : ""}${g.src}" />`).join("")}</div>
         <div class="status-line ${failed ? "err" : ""}">
@@ -318,7 +315,7 @@ async function renderResults() {
     const links = el.querySelector(".links");
     if (done) {
       links.append(
-        button("Открыть", () => chrome.tabs.create({ url: job.output })),
+        button("Открыть", () => chrome.tabs.create({ url: chrome.runtime.getURL(`result.html?id=${job.id}`) })),
         button("Скачать", () => downloadResult(job)),
       );
     }
@@ -340,9 +337,14 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// Локальная копия результата, если успели сохранить; иначе временная ссылка Replicate
+function resultSrc(job) {
+  return job.outputDataUrl || job.output;
+}
+
 async function downloadResult(job) {
   try {
-    const res = await fetch(job.output);
+    const res = await fetch(resultSrc(job));
     const blob = await res.blob();
     downloadBlob(blob, `tryon-${job.id.slice(0, 8)}.${(blob.type.split("/")[1] || "png").replace("jpeg", "jpg")}`);
   } catch {

@@ -53,7 +53,8 @@ export async function reuploadRemoteImage(token, url) {
 export async function createPrediction(token, input) {
   const res = await fetch(`${API}/models/${MODEL}/predictions`, {
     method: "POST",
-    headers: headers(token, { "Content-Type": "application/json", Prefer: "wait=60" }),
+    // без Prefer: wait — долгий запрос рискует пережить idle-таймер service worker'а, статус опрашиваем сами
+    headers: headers(token, { "Content-Type": "application/json" }),
     body: JSON.stringify({ input }),
   });
   if (!res.ok) throw await parseError(res);
@@ -84,6 +85,19 @@ export function firstOutputUrl(output) {
   if (Array.isArray(output)) return output.find((o) => typeof o === "string") || null;
   if (typeof output === "object") return output.url || output.image || null;
   return null;
+}
+
+// Скачиваем результат и превращаем в data URL — ссылки replicate.delivery живут около часа
+export async function fetchAsDataUrl(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Не удалось скачать результат: ${res.status}`);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 export async function verifyToken(token) {

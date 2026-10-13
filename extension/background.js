@@ -5,7 +5,9 @@ import {
   reuploadRemoteImage,
   createPrediction,
   waitForPrediction,
+  getPrediction,
   firstOutputUrl,
+  fetchAsDataUrl,
   verifyToken,
 } from "./replicate.js";
 
@@ -25,11 +27,24 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-chrome.commands.onCommand.addListener(async (command, tab) => {
-  if (command === "toggle-picker" && tab?.id) {
-    chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_PICKER" }).catch(() => {});
-  }
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command === "toggle-picker" && tab?.id) togglePicker(tab.id);
 });
+
+// Вкладки, открытые до установки/обновления расширения, не содержат content.js — подгружаем его сами
+async function togglePicker(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PICKER" });
+  } catch {
+    try {
+      await chrome.scripting.insertCSS({ target: { tabId }, files: ["content.css"] });
+      await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+      await chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PICKER" });
+    } catch {
+      // служебные страницы (chrome://, Web Store) — туда скрипты не пускают
+    }
+  }
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === "SAVE_IMAGE") {
@@ -38,7 +53,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.type === "TOGGLE_PICKER_IN_TAB") {
     chrome.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
-      if (tab?.id) chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_PICKER" }).catch(() => {});
+      if (tab?.id) togglePicker(tab.id);
     });
   }
   if (msg.type === "START_TRYON") {
@@ -80,12 +95,18 @@ chrome.storage.local.get("images").then(({ images = [] }) => {
 
 // ---------- примерка ----------
 
-async function updateJob(id, patch) {
-  const { tryons = [] } = await chrome.storage.local.get("tryons");
-  const idx = tryons.findIndex((t) => t.id === id);
-  if (idx === -1) return;
-  tryons[idx] = { ...tryons[idx], ...patch, updatedAt: Date.now() };
-  await chrome.storage.local.set({ tryons });
+// Записи в tryons идут по очереди: параллельные read-modify-write затирали бы друг друга
+let jobWrites = Promise.resolve();
+function updateJob(id, patch) {
+  const write = jobWrites.then(async () => {
+    const { tryons = [] } = await chrome.storage.local.get("tryons");
+    const idx = tryons.findIndex((t) => t.id === id);
+    if (idx === -1) return;
+    tryons[idx] = { ...tryons[idx], ...patch, updatedAt: Date.now() };
+    await chrome.storage.local.set({ tryons });
+  });
+  jobWrites = write.catch(() => {});
+  return write;
 }
 
 const SLOTS = ["top", "bottom", "shoes"];
@@ -152,10 +173,43 @@ async function runTryOn(job, { token, personDataUrl, turbo }) {
     prediction = await runOnce(job, token, makeInput(urls));
   }
 
+  await finishJob(job.id, prediction);
+}
+
+// Сохраняем результат локально: ссылка Replicate протухает примерно через час
+async function finishJob(jobId, prediction) {
   const output = firstOutputUrl(prediction.output);
   if (!output) throw new Error("Модель не вернула картинку");
-  await updateJob(job.id, { status: "succeeded", output, note: null, metrics: prediction.metrics || null });
+  await updateJob(jobId, { status: "saving", output, note: null, metrics: prediction.metrics || null });
+  let outputDataUrl = null;
+  try {
+    outputDataUrl = await fetchAsDataUrl(output);
+  } catch (e) {
+    console.warn("Не удалось сохранить результат локально", e);
+  }
+  await updateJob(jobId, { status: "succeeded", outputDataUrl });
 }
+
+// Service worker могли усыпить посреди примерки — при старте дожидаемся незавершённых предсказаний
+async function resumeUnfinished() {
+  const { tryons = [], replicateToken } = await chrome.storage.local.get(["tryons", "replicateToken"]);
+  for (const job of tryons) {
+    const unfinished = ["starting", "uploading", "processing", "saving"].includes(job.status);
+    if (!unfinished) continue;
+    if (!job.predictionId || !replicateToken) {
+      await updateJob(job.id, { status: "failed", error: "Примерка прервалась до отправки — нажми «Повторить»" });
+      continue;
+    }
+    getPrediction(replicateToken, job.predictionId)
+      .then((p) => waitForPrediction(replicateToken, p, (u) => updateJob(job.id, { status: u.status })))
+      .then((p) => {
+        if (p.status !== "succeeded") throw new Error(p.error || `Статус: ${p.status}`);
+        return finishJob(job.id, p);
+      })
+      .catch((e) => updateJob(job.id, { status: "failed", error: e.message }));
+  }
+}
+resumeUnfinished();
 
 async function runOnce(job, token, input) {
   await updateJob(job.id, { status: "processing" });

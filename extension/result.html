@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Clothes Picker — результат примерки</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #111; color: #eee; font-family: system-ui, sans-serif; }
+    img { max-width: 96vw; max-height: 86vh; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+    a { color: #ff3b7f; }
+    .actions { display: flex; gap: 12px; }
+    button { padding: 8px 16px; border-radius: 8px; border: 0; background: #ff3b7f; color: #fff; font-size: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <img id="img" alt="Результат примерки" hidden />
+  <p id="msg">Загружаю…</p>
+  <div class="actions"><button id="download" hidden>Скачать</button></div>
+  <script src="result.js"></script>
+</body>
+</html>
